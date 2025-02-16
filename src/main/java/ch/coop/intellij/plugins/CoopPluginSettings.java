@@ -1,5 +1,6 @@
 package ch.coop.intellij.plugins;
 
+import ch.coop.intellij.plugins.urlopener.SearchPattern;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
@@ -11,6 +12,8 @@ import javax.naming.ConfigurationException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Persistent settings for the Branch Creator plugin.
@@ -38,15 +41,15 @@ public final class CoopPluginSettings implements PersistentStateComponent<CoopPl
         public String jiraApiUrl = DEFAULT_JIRA_API_URL;
         public String jiraApiToken = DEFAULT_JIRA_API_TOKEN;
 
-        // Neues Feld für die Basis-URL
-        public static final String DEFAULT_BASE_URL = "https://example.com/";
-        public String baseUrl = DEFAULT_BASE_URL;
+        // Liste der Suchmuster
+        public List<SearchPattern> searchPatterns = new ArrayList<>();
+        public int defaultSearchPatternIndex = -1; // Index der Standard-URL
     }
 
     private volatile State myState = new State();
 
     /**
-     * Returns the singleton instance of BranchCreatorSettings.
+     * Returns the singleton instance of CoopPluginSettings.
      *
      * @return The singleton instance.
      */
@@ -83,9 +86,6 @@ public final class CoopPluginSettings implements PersistentStateComponent<CoopPl
         if (myState.jiraApiToken == null || myState.jiraApiToken.trim().isEmpty()) {
             throw new ConfigurationException("Jira API Token cannot be empty.");
         }
-        if (myState.baseUrl == null || myState.baseUrl.trim().isEmpty() || !isValidUrl(myState.baseUrl)) {
-            throw new ConfigurationException("Invalid Base URL.");
-        }
     }
 
     private boolean isValidUrl(String url) {
@@ -95,5 +95,23 @@ public final class CoopPluginSettings implements PersistentStateComponent<CoopPl
         } catch (URISyntaxException | MalformedURLException e) {
             return false;
         }
+    }
+
+    // Getter und Setter für die Suchmuster
+    public List<SearchPattern> getSearchPatterns() {
+        return myState.searchPatterns;
+    }
+
+    public void setSearchPatterns(List<SearchPattern> searchPatterns) {
+        myState.searchPatterns = searchPatterns;
+    }
+
+    // Getter und Setter für den Standard-Index
+    public int getDefaultSearchPatternIndex() {
+        return myState.defaultSearchPatternIndex;
+    }
+
+    public void setDefaultSearchPatternIndex(int defaultSearchPatternIndex) {
+        myState.defaultSearchPatternIndex = defaultSearchPatternIndex;
     }
 }
