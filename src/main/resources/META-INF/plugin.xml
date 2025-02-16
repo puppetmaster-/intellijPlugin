@@ -1,0 +1,48 @@
+<idea-plugin>
+    <id>ch.coop.intellij.plugin</id>
+    <name>Coop Plugins</name>
+    <vendor email="christian.fisch@coop.ch" url="https://www.coop.ch">Coop Genossenschaft</vendor>
+    <description><![CDATA[Ein Plugin zum Erstellen von Repository-Branches nach einem bestimmten Muster für verschiedene VCS.]]></description>
+
+    <idea-version since-build="243.23654" until-build="243.*"/>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <actions>
+        <group id="ch.coop.intellij.plugins.PluginsGroup"
+               text="Plugins"
+               icon="/icons/coop_small.svg"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+
+            <action id="ch.coop.intellij.plugins.branchcreator.BranchCreatorAction"
+                    class="ch.coop.intellij.plugins.branchcreator.BranchCreatorAction"
+                    text="Create Branch..."
+                    description="Create a branch"/>
+        </group>
+        <action id="ch.coop.intellij.plugins.URLOpenerAction"
+                class="ch.coop.intellij.plugins.urlopener.URLOpenerAction"
+                text="Open URL"
+                description="Open a URL in the browser">
+            <add-to-group group-id="MainToolbarCenter" anchor="last"/> <!-- In der Haupt-Toolbar platzieren -->
+        </action>
+    </actions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Hauptgruppe "Coop Plugins" in den Einstellungen -->
+        <applicationConfigurable groupId="tools"
+                                 groupWeight="100"
+                                 id="ch.coop.intellij.plugins.CoopPluginsGroup"
+                                 displayName="Coop Plugins"
+                                 instance="ch.coop.intellij.plugins.CoopPluginsConfigurable"/>
+
+        <!-- Unterpunkt "Branch Creator" in der Gruppe "Coop Plugins" -->
+        <applicationConfigurable parentId="ch.coop.intellij.plugins.CoopPluginsGroup"
+                                 instance="ch.coop.intellij.plugins.branchcreator.BranchCreatorConfigurable"
+                                 id="ch.coop.intellij.plugins.branchcreator.BranchCreatorConfigurable"
+                                 displayName="Branch Creator Settings"/>
+
+        <!-- Service für die Einstellungen -->
+        <applicationService serviceImplementation="ch.coop.intellij.plugins.CoopPluginSettings"/>
+    </extensions>
+</idea-plugin>
