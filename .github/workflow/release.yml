@@ -1,0 +1,49 @@
+name: Build and Release Plugin
+
+on:
+  push:
+    branches:
+      - main  # Ändere dies zu deinem Standard-Branch, falls nötig
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Schritt 1: Checkout des Repositorys
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Schritt 2: Setze Java-Umgebung auf
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'  # Entspricht deiner Konfiguration in build.gradle
+
+      # Schritt 3: Baue das Plugin mit Gradle
+      - name: Build plugin with Gradle
+        run: ./gradlew buildPlugin
+
+      # Schritt 4: Erstelle ein GitHub Release
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}  # Versionsnummer basierend auf der Run-Nummer
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      # Schritt 5: Lade das gebaute Plugin als Asset hoch
+      - name: Upload Plugin as Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build/distributions/*.zip  # Pfad zum gebauten Plugin
+          asset_name: intellij-plugin-v${{ github.run_number }}.zip  # Name des Assets
+          asset_content_type: application/zip
