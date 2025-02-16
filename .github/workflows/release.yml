@@ -21,11 +21,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'  # Entspricht deiner Konfiguration in build.gradle
 
-      # Schritt 3: Baue das Plugin mit Gradle
+      # Schritt 3: Setze Ausführungsberechtigungen für gradlew
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # Schritt 4: Baue das Plugin mit Gradle
       - name: Build plugin with Gradle
         run: ./gradlew buildPlugin
 
-      # Schritt 4: Erstelle ein GitHub Release
+      # Schritt 5: Erstelle ein GitHub Release
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -37,7 +41,7 @@ jobs:
           draft: false
           prerelease: false
 
-      # Schritt 5: Lade das gebaute Plugin als Asset hoch
+      # Schritt 6: Lade das gebaute Plugin als Asset hoch
       - name: Upload Plugin as Release Asset
         uses: actions/upload-release-asset@v1
         env:
