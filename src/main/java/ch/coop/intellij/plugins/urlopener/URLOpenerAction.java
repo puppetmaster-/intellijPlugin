@@ -19,23 +19,19 @@ public class URLOpenerAction extends AnAction implements CustomComponentAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        // Diese Methode wird nicht verwendet, da wir eine benutzerdefinierte Komponente haben.
+        // Diese Methode wird nicht verwendet, da die Logik in createCustomComponent implementiert ist.
     }
 
     @Override
     public @NotNull JComponent createCustomComponent(@NotNull Presentation presentation, @NotNull String place) {
-        // Hauptpanel für das Suchfeld und das Zahnrad-Symbol
         JPanel mainPanel = new JPanel(new BorderLayout());
 
-        // Erstelle ein SearchTextField
         SearchTextField searchTextField = new SearchTextField();
         searchTextField.setPreferredSize(new java.awt.Dimension(200, 30)); // Größe anpassen
 
-        // Füge einen KeyListener hinzu, um auf die Enter-Taste zu reagieren
         searchTextField.getTextEditor().addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
-                // Nicht benötigt
             }
 
             @Override

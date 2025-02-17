@@ -72,13 +72,11 @@ public class RepoHelper {
      */
     public static void findRepositories(File directory, List<String> repositoryPaths, String repositoryDirName) {
         if (directory.isDirectory()) {
-            // Überprüfe, ob das Verzeichnis ein Repository enthält
             File repositoryDir = new File(directory, repositoryDirName);
             if (repositoryDir.exists()) {
                 repositoryPaths.add(directory.getAbsolutePath());
             }
 
-            // Durchsuche Unterverzeichnisse
             File[] subDirs = directory.listFiles(File::isDirectory);
             if (subDirs != null) {
                 for (File subDir : subDirs) {

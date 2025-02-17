@@ -28,39 +28,24 @@ public class BranchCreatorConfigurable implements Configurable {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Prefix
         prefixField = new JTextField();
         addLabelAndComponent(mainPanel, gbc, 0, "Prefix:", prefixField);
 
-        // Space Replacement
         spaceReplacementField = new JTextField();
         addLabelAndComponent(mainPanel, gbc, 1, "Space Replacement:", spaceReplacementField);
 
-        // Auto Push
         autoPushCheckBox = new JCheckBox();
         addLabelAndComponent(mainPanel, gbc, 2, "Auto Push:", autoPushCheckBox);
 
-        // Jira API URL
         jiraApiUrlField = new JTextField();
         addLabelAndComponent(mainPanel, gbc, 3, "Jira API URL:", jiraApiUrlField);
 
-        // Jira API Token
         jiraApiTokenField = new JPasswordField();
         addLabelAndComponent(mainPanel, gbc, 4, "Jira API Token:", jiraApiTokenField);
 
-        // Laden Sie die aktuellen Einstellungen
         loadSettings();
     }
 
-    /**
-     * Fügt ein Label und eine Komponente zum Panel hinzu.
-     *
-     * @param panel      Das Panel, zu dem die Komponenten hinzugefügt werden sollen.
-     * @param gbc        Die GridBagConstraints für das Layout.
-     * @param gridy      Die Zeile, in der die Komponenten platziert werden sollen.
-     * @param labelText  Der Text des Labels.
-     * @param component  Die Komponente (z. B. JTextField, JCheckBox, JComboBox).
-     */
     private void addLabelAndComponent(JPanel panel, GridBagConstraints gbc, int gridy, String labelText, JComponent component) {
         gbc.gridx = 0;
         gbc.gridy = gridy;
@@ -76,9 +61,6 @@ public class BranchCreatorConfigurable implements Configurable {
         panel.add(component, gbc);
     }
 
-    /**
-     * Lädt die aktuellen Einstellungen in die UI-Komponenten.
-     */
     private void loadSettings() {
         prefixField.setText(settings.getState().prefix);
         spaceReplacementField.setText(settings.getState().spaceReplacement);
@@ -110,19 +92,16 @@ public class BranchCreatorConfigurable implements Configurable {
 
     @Override
     public void apply() throws ConfigurationException {
-        // Validierung der Jira-API-URL
         String jiraApiUrl = jiraApiUrlField.getText();
         if (!isValidUrl(jiraApiUrl)) {
             throw new ConfigurationException("Invalid Jira API URL. Please enter a valid URL.");
         }
 
-        // Validierung des Jira-API-Tokens
         String jiraApiToken = new String(jiraApiTokenField.getPassword());
         if (jiraApiToken.isEmpty()) {
             throw new ConfigurationException("Jira API Token is required.");
         }
 
-        // Einstellungen speichern
         settings.getState().prefix = prefixField.getText();
         settings.getState().spaceReplacement = spaceReplacementField.getText();
         settings.getState().autoPush = autoPushCheckBox.isSelected();

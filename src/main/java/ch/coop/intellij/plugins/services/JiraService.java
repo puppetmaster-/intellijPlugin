@@ -54,7 +54,6 @@ public class JiraService {
                 }
                 in.close();
 
-                // Verarbeite die Antwort und extrahiere die Issues
                 issues = parseJiraIssues(response.toString());
             } else {
                 Messages.showErrorDialog(project, "Failed to search Jira issues: " + responseCode, "Error");

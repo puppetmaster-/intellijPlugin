@@ -24,14 +24,13 @@ public class BranchCreatorDialog extends DialogWrapper {
     private Project project;
     private JPanel contentPane;
     private GridBagConstraints gbc;
-    private JTextField jiraIssueIdField;
     private JTextField shortDescriptionField;
     private JLabel newBranchNameValueLabel;
     private JComboBox<String> jiraIssueIdComboBox;
-    private JComboBox<String> repositoryComboBox; // Dropdown für Repository-Verzeichnisse
+    private JComboBox<String> repositoryComboBox;
     private JLabel configureLink;
-    private JLabel vcsInfoLabel; // Label für VCS-Informationen
-    private JLabel currentBranchLabel; // Label für den aktuellen Branch
+    private JLabel vcsInfoLabel;
+    private JLabel currentBranchLabel;
 
     private final CoopPluginSettings settings;
     private final JiraService jiraService;
@@ -63,69 +62,60 @@ public class BranchCreatorDialog extends DialogWrapper {
         System.out.println("initLayout");
         contentPane = new JPanel(new GridBagLayout());
         gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5); // Abstand zwischen den Komponenten
+        gbc.insets = new Insets(5, 5, 5, 5);
     }
 
     private void initComponents() {
         System.out.println("initComponents");
 
-        // Repository-Verzeichnisse ermitteln
         List<String> repositoryPaths = new ArrayList<>();
         for (VcsHandler handler : vcsHandlerManager.getHandlers()) {
             repositoryPaths.addAll(handler.getRepositoryPaths(project));
         }
 
-        // Repository-Auswahl
         repositoryComboBox = new ComboBox<>(repositoryPaths.toArray(new String[0]));
-        repositoryComboBox.addActionListener(e -> updateVcsInfo()); // Listener für Repository-Auswahl
+        repositoryComboBox.addActionListener(e -> updateVcsInfo());
         addLabelAndComponent(0, "Repository:", repositoryComboBox);
 
-        // VCS-Informationen (initial leer)
         vcsInfoLabel = new JLabel();
         addLabelAndComponent(1, "VCS:", vcsInfoLabel);
 
-        // Aktueller Branch (initial leer)
         currentBranchLabel = new JLabel();
         addLabelAndComponent(2, "Current Branch:", currentBranchLabel);
 
-        // Jira Issue ID
         jiraIssueIdComboBox = new JComboBox<>();
         jiraIssueIdComboBox.setEditable(true);
         addLabelAndComponent(3, "Jira Issue ID:", jiraIssueIdComboBox);
 
-        // Short Description
         shortDescriptionField = new JTextField();
         shortDescriptionField.setToolTipText("Enter a short description for the branch.");
         addLabelAndComponent(4, "Short Description:", shortDescriptionField);
 
-        // Branch Name Preview
         newBranchNameValueLabel = new JLabel();
         newBranchNameValueLabel.setText("<html><b>" + newBranchNameValueLabel.getText() + "</b></html>");
         addLabelAndComponent(5, "New Branch Name:", newBranchNameValueLabel);
 
-        // Klickbarer Textlink zur Konfiguration
         configureLink = UIHelper.createConfigLink("Configure Repo Branch Creator", "Repo Branch Creator Settings",project);
-        addComponent(6, configureLink); // Leeres Label, um den Link korrekt auszurichten
+        addComponent(6, configureLink);
 
-        // Add document listeners to update the branch name preview and trigger validation
         jiraIssueIdComboBox.getEditor().getEditorComponent().addPropertyChangeListener("document", evt -> {
             updateNewBranchNamePreview();
             searchJiraIssues(jiraIssueIdComboBox.getEditor().getItem().toString());
-            validate(); // Validierung bei Änderungen in der Jira Issue ID
+            validate();
         });
 
         shortDescriptionField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void changedUpdate(javax.swing.event.DocumentEvent e) {
                 updateNewBranchNamePreview();
-                validate(); // Validierung bei Änderungen in der Short Description
+                validate();
             }
             public void removeUpdate(javax.swing.event.DocumentEvent e) {
                 updateNewBranchNamePreview();
-                validate(); // Validierung bei Änderungen in der Short Description
+                validate();
             }
             public void insertUpdate(javax.swing.event.DocumentEvent e) {
                 updateNewBranchNamePreview();
-                validate(); // Validierung bei Änderungen in der Short Description
+                validate();
             }
         });
 
@@ -133,7 +123,6 @@ public class BranchCreatorDialog extends DialogWrapper {
     }
 
     private void updateVcsInfo() {
-        // Ausgewähltes Repository-Verzeichnis
         String selectedRepository = (String) repositoryComboBox.getSelectedItem();
         if (selectedRepository == null) {
             vcsInfoLabel.setText("No repository selected");
@@ -141,14 +130,11 @@ public class BranchCreatorDialog extends DialogWrapper {
             return;
         }
 
-        // VCS-Handler für das ausgewählte Verzeichnis
         VcsHandler handler = vcsHandlerManager.getSupportedHandler(project);
         if (handler != null) {
             try {
-                // VCS-Typ anzeigen
                 vcsInfoLabel.setText(handler.getClass().getSimpleName().replace("Handler", ""));
 
-                // Aktuellen Branch anzeigen
                 String currentBranch = handler.getCurrentBranch(project, selectedRepository);
                 currentBranchLabel.setText(currentBranch != null ? currentBranch : "N/A");
             } catch (VcsCommandException e) {
@@ -202,24 +188,19 @@ public class BranchCreatorDialog extends DialogWrapper {
 
     @Override
     protected Action @NotNull [] createActions() {
-        // Standardaktionen (OK und Cancel) holen
         Action[] actions = super.createActions();
 
-        // OK-Button (Create Branch) nach rechts verschieben
-        Action okAction = actions[0]; // OK-Button
-        Action cancelAction = actions[1]; // Cancel-Button
+        Action okAction = actions[0];
+        Action cancelAction = actions[1];
 
-        // Reihenfolge ändern: Cancel links, OK rechts
         return new Action[]{cancelAction, okAction};
     }
 
     @Override
     protected @NotNull Action getOKAction() {
-        // Text des OK-Buttons ändern
         return new DialogWrapperAction("Create Branch") {
             @Override
             protected void doAction(ActionEvent e) {
-                // Standard-OK-Logik ausführen
                 doOKAction();
             }
         };
@@ -227,14 +208,12 @@ public class BranchCreatorDialog extends DialogWrapper {
 
     @Override
     protected void doOKAction() {
-        // Validierung durchführen
         ValidationInfo validationInfo = doValidate();
         if (validationInfo != null) {
             Messages.showErrorDialog(project, validationInfo.message, "Validation Error");
             return;
         }
 
-        // Bestätigungsdialog anzeigen
         String confirmationMessage = "Are you sure you want to create the branch";
         if (settings.getState().autoPush) {
             confirmationMessage += " and push it to the remote repository";
@@ -249,48 +228,16 @@ public class BranchCreatorDialog extends DialogWrapper {
         );
 
         if (result != Messages.YES) {
-            return; // Abbruch, wenn der Benutzer nicht bestätigt
+            return;
         }
 
-        // Branch erstellen
-//        String jiraIssueId = jiraIssueIdComboBox.getEditor().getItem().toString();
-//        String shortDescription = shortDescriptionField.getText().replace(" ", settings.getState().spaceReplacement);
-//        String branchName = generateNewBranchName(jiraIssueId, shortDescription);
-//        createBranch(branchName);
-
-        // Dialog schließen
         super.doOKAction();
     }
-
-//    private void createBranch(String branchName) {
-//        // Ausgewähltes Repository-Verzeichnis
-//        String selectedRepository = (String) repositoryComboBox.getSelectedItem();
-//        if (selectedRepository == null) {
-//            Messages.showErrorDialog(project, "No repository selected.", "Error");
-//            return;
-//        }
-//
-//        // VCS-Handler für das ausgewählte Verzeichnis
-//        VcsHandler handler = vcsHandlerManager.getSupportedHandler(project);
-//        if (handler != null) {
-//            try {
-//                handler.createBranch(project, branchName, selectedRepository, true);
-//            } catch (Exception ex) {
-//                Messages.showErrorDialog(project, "Failed to create branch: " + ex.getMessage(), "Error");
-//            }
-//        } else {
-//            Messages.showErrorDialog(project, "No supported VCS repository found.", "Error");
-//        }
-//    }
 
     public String getNewBranchName() {
         return newBranchNameValueLabel.getText();
     }
-    /**
-     * Gibt den ausgewählten Repository-Pfad zurück.
-     *
-     * @return Der ausgewählte Repository-Pfad oder null, wenn keiner ausgewählt wurde.
-     */
+
     public String getSelectedRepositoryPath() {
         return (String) repositoryComboBox.getSelectedItem();
     }
@@ -325,12 +272,11 @@ public class BranchCreatorDialog extends DialogWrapper {
     protected void addComponent(int gridy, JComponent component) {
         gbc.gridx = 0;
         gbc.gridy = gridy;
-        gbc.gridwidth = 2; // Spannt die Komponente über beide Spalten
+        gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1;
         contentPane.add(component, gbc);
 
-        // Reset gridwidth für nachfolgende Komponenten
         gbc.gridwidth = 1;
     }
 }
