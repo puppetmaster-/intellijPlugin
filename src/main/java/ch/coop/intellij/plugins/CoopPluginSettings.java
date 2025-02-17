@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.naming.ConfigurationException;
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -27,7 +28,8 @@ public final class CoopPluginSettings implements PersistentStateComponent<CoopPl
     /**
      * Inner class representing the state of the settings.
      */
-    public static class State {
+    public static class State implements Serializable {
+        private static final long serialVersionUID = 1L; // Füge eine serialVersionUID hinzu
         public static final String DEFAULT_PREFIX = "feature/";
         public static final String DEFAULT_SPACE_REPLACEMENT = "_";
         public static final boolean DEFAULT_AUTO_PUSH = false;

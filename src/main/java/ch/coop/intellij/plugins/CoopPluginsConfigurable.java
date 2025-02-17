@@ -4,19 +4,23 @@ import ch.coop.intellij.plugins.urlopener.SearchPattern;
 import com.intellij.openapi.options.Configurable;
 import com.intellij.ui.*;
 import com.intellij.ui.components.JBLabel;
-import com.intellij.ui.components.JBList;
+import com.intellij.ui.table.JBTable;
+import com.intellij.openapi.ui.Messages;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CoopPluginsConfigurable implements Configurable {
     private JPanel mainPanel;
-    private JBList<SearchPattern> jbList;
-    private CollectionListModel<SearchPattern> listModel;
+    private JBTable table;
+    private DefaultTableModel tableModel;
 
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
@@ -34,46 +38,40 @@ public class CoopPluginsConfigurable implements Configurable {
         titleLabel.setFont(new Font(titleLabel.getFont().getName(), Font.BOLD, 14));
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
-        // Liste für Suchmuster
-        listModel = new CollectionListModel<>();
-        jbList = new JBList<>(listModel);
-        jbList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Renderer für die Liste
-        jbList.setCellRenderer(new DefaultListCellRenderer() {
+        // Tabelle für Suchmuster
+        tableModel = new DefaultTableModel(new Object[]{"Name", "Shortcut", "URL"}, 0) {
             @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (value instanceof SearchPattern) {
-                    SearchPattern pattern = (SearchPattern) value;
-                    setText(pattern.getName() + " (" + pattern.getShortcut() + ") - " + pattern.getUrl());
-                }
-                return this;
+            public boolean isCellEditable(int row, int column) {
+                return false; // Tabelle nicht editierbar machen
             }
-        });
+        };
+        table = new JBTable(tableModel);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // ToolbarDecorator für die Liste
-        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(jbList)
+        // ToolbarDecorator für die Tabelle
+        ToolbarDecorator decorator = ToolbarDecorator.createDecorator(table)
                 .setAddAction(button -> {
                     // Erstelle ein neues, leeres Suchmuster
                     SearchPattern newPattern = new SearchPattern("", "", "");
                     // Öffne den Dialog zum Bearbeiten
                     if (editSearchPattern(newPattern)) {
-                        listModel.add(newPattern); // Füge das neue Suchmuster hinzu
-                        jbList.setSelectedValue(newPattern, true); // Markiere das neue Suchmuster
+                        addPatternToTable(newPattern); // Füge das neue Suchmuster zur Tabelle hinzu
+                        table.setRowSelectionInterval(tableModel.getRowCount() - 1, tableModel.getRowCount() - 1); // Markiere das neue Suchmuster
                     }
                 })
                 .setRemoveAction(button -> {
-                    int selectedIndex = jbList.getSelectedIndex();
-                    if (selectedIndex >= 0) {
-                        listModel.remove(selectedIndex);
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow >= 0) {
+                        tableModel.removeRow(selectedRow); // Entferne das ausgewählte Suchmuster
                     }
                 })
                 .setEditAction(button -> {
-                    int selectedIndex = jbList.getSelectedIndex();
-                    if (selectedIndex >= 0) {
-                        SearchPattern selectedPattern = listModel.getElementAt(selectedIndex);
-                        editSearchPattern(selectedPattern); // Öffne den Dialog zum Bearbeiten
+                    int selectedRow = table.getSelectedRow();
+                    if (selectedRow >= 0) {
+                        SearchPattern selectedPattern = getPatternFromTable(selectedRow);
+                        if (editSearchPattern(selectedPattern)) {
+                            updatePatternInTable(selectedRow, selectedPattern); // Aktualisiere das Suchmuster in der Tabelle
+                        }
                     }
                 });
 
@@ -88,13 +86,46 @@ public class CoopPluginsConfigurable implements Configurable {
 
     @Override
     public boolean isModified() {
-        return true; // Immer als geändert markieren, da wir keine direkte Überprüfung implementieren
+        List<SearchPattern> currentPatterns = getPatternsFromTable();
+        List<SearchPattern> savedPatterns = CoopPluginSettings.getInstance().getSearchPatterns();
+        return !currentPatterns.equals(savedPatterns); // Nur true zurückgeben, wenn die Listen unterschiedlich sind
     }
 
     @Override
     public void apply() {
-        // Speichere die Suchmuster
-        List<SearchPattern> searchPatterns = new ArrayList<>(listModel.getItems());
+        // Überprüfe die URLs und doppelten Shortcuts vor dem Speichern
+        List<SearchPattern> searchPatterns = getPatternsFromTable();
+
+        // Überprüfe auf doppelte Shortcuts
+        Set<String> shortcuts = new HashSet<>();
+        for (SearchPattern pattern : searchPatterns) {
+            String shortcut = pattern.getShortcut();
+            if (shortcuts.contains(shortcut)) {
+                // Zeige eine Fehlermeldung an, wenn ein doppelter Shortcut gefunden wird
+                Messages.showErrorDialog(
+                        mainPanel,
+                        "Der Shortcut '" + shortcut + "' ist bereits vorhanden. Bitte verwende einen eindeutigen Shortcut.",
+                        "Fehler"
+                );
+                return; // Breche den Speichervorgang ab
+            }
+            shortcuts.add(shortcut);
+        }
+
+        // Überprüfe die URLs
+        for (SearchPattern pattern : searchPatterns) {
+            if (!isValidUrl(pattern.getUrl())) {
+                // Zeige eine Fehlermeldung an, wenn die URL ungültig ist
+                Messages.showErrorDialog(
+                        mainPanel,
+                        "Die URL für das Suchmuster '" + pattern.getName() + "' ist ungültig. Sie muss '%s' enthalten.",
+                        "Fehler"
+                );
+                return; // Breche den Speichervorgang ab
+            }
+        }
+
+        // Speichere die Suchmuster, wenn alle Überprüfungen bestanden sind
         CoopPluginSettings.getInstance().setSearchPatterns(searchPatterns);
     }
 
@@ -110,8 +141,36 @@ public class CoopPluginsConfigurable implements Configurable {
     }
 
     private void loadSearchPatterns() {
-        listModel.removeAll();
-        listModel.addAll(0,CoopPluginSettings.getInstance().getSearchPatterns());
+        tableModel.setRowCount(0); // Tabelle leeren
+        for (SearchPattern pattern : CoopPluginSettings.getInstance().getSearchPatterns()) {
+            addPatternToTable(pattern); // Suchmuster zur Tabelle hinzufügen
+        }
+    }
+
+    private void addPatternToTable(SearchPattern pattern) {
+        tableModel.addRow(new Object[]{pattern.getName(), pattern.getShortcut(), pattern.getUrl()});
+    }
+
+    private void updatePatternInTable(int row, SearchPattern pattern) {
+        tableModel.setValueAt(pattern.getName(), row, 0);
+        tableModel.setValueAt(pattern.getShortcut(), row, 1);
+        tableModel.setValueAt(pattern.getUrl(), row, 2);
+    }
+
+    private SearchPattern getPatternFromTable(int row) {
+        return new SearchPattern(
+                (String) tableModel.getValueAt(row, 0), // Name
+                (String) tableModel.getValueAt(row, 1), // Shortcut
+                (String) tableModel.getValueAt(row, 2)  // URL
+        );
+    }
+
+    private List<SearchPattern> getPatternsFromTable() {
+        List<SearchPattern> patterns = new ArrayList<>();
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            patterns.add(getPatternFromTable(i));
+        }
+        return patterns;
     }
 
     private boolean editSearchPattern(SearchPattern pattern) {
@@ -128,21 +187,55 @@ public class CoopPluginsConfigurable implements Configurable {
         panel.add(new JBLabel("URL:"));
         panel.add(urlField);
 
-        int result = JOptionPane.showConfirmDialog(
-                mainPanel,
-                panel,
-                "Search Pattern bearbeiten",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE
-        );
+        while (true) {
+            int result = JOptionPane.showConfirmDialog(
+                    mainPanel,
+                    panel,
+                    "Search Pattern bearbeiten",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
 
-        if (result == JOptionPane.OK_OPTION) {
-            pattern.setName(nameField.getText());
-            pattern.setShortcut(shortcutField.getText());
-            pattern.setUrl(urlField.getText());
-            return true; // Dialog mit OK geschlossen
+            if (result == JOptionPane.OK_OPTION) {
+                String newShortcut = shortcutField.getText().trim();
+
+                // Überprüfe, ob der Shortcut bereits vorhanden ist (außer beim Bearbeiten des aktuellen Musters)
+                boolean isDuplicate = getPatternsFromTable().stream()
+                        .filter(p -> !p.equals(pattern)) // Ignoriere das aktuelle Muster beim Bearbeiten
+                        .anyMatch(p -> p.getShortcut().equals(newShortcut));
+
+                if (isDuplicate) {
+                    // Zeige eine Fehlermeldung an, wenn der Shortcut bereits vorhanden ist
+                    Messages.showErrorDialog(
+                            mainPanel,
+                            "Der Shortcut '" + newShortcut + "' ist bereits vorhanden. Bitte verwende einen eindeutigen Shortcut.",
+                            "Fehler"
+                    );
+                    continue; // Zeige den Dialog erneut an
+                }
+
+                // Überprüfe, ob die URL gültig ist
+                if (!isValidUrl(urlField.getText())) {
+                    Messages.showErrorDialog(
+                            mainPanel,
+                            "Die URL muss den Platzhalter '%s' enthalten.",
+                            "Fehler"
+                    );
+                    continue; // Zeige den Dialog erneut an
+                }
+
+                // Speichere die Änderungen
+                pattern.setName(nameField.getText());
+                pattern.setShortcut(newShortcut);
+                pattern.setUrl(urlField.getText());
+                return true; // Dialog mit OK geschlossen
+            }
+
+            return false; // Dialog mit Abbrechen geschlossen
         }
+    }
 
-        return false; // Dialog mit Abbrechen geschlossen
+    private boolean isValidUrl(String url) {
+        return url != null && url.contains("%s"); // Überprüfe, ob die URL den Platzhalter '%s' enthält
     }
 }
